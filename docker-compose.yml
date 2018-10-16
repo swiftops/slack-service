@@ -1,0 +1,15 @@
+version: "2.3"
+services:
+ slackmongo:
+   image: digite/slackdb
+   hostname: slackmongo
+   ports:
+   - "27017:27017"
+ slackops:
+   image: swiftops/slackops:latest
+   build: .
+   container_name: slackops
+   ports:
+   - "8080:8080"
+   links:
+   - slackmongo

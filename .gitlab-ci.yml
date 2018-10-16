@@ -1,0 +1,23 @@
+.shared_hidden_key: &shared 
+  before_script:
+    - docker login -u "USER_NAME" -p "PASSWORD"
+
+stages:
+ - build_images
+ - deploy
+ 
+job1:
+  tags:
+    - micro_runner
+  <<: *shared
+  stage: build_images
+  script:
+  - docker build -t <IMAGE_NAME> .
+  - docker push <IMAGE_NAME>
+
+job2:
+  tags:
+    - micro_runner
+  stage: deploy
+  script:
+  - ssh -i PATH_TO_AWS_KEY_FILE MACHINE_USERNAME@MACHINE_IP 'bash -s' < deploy.sh
