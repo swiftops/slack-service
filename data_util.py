@@ -25,41 +25,41 @@ def loadjenkins():
     server = Jenkins(jenkins_url, username=jenkins_username, password=jenkins_token, requester=crumb, timeout=10)
 
 def registerjob(jobname):
-        joburl=''
-		config.read("config.ini")
-		user_list = requests.get(config.get("SLACKPARAMETER", "slack_user_list"))
+    joburl=''
+    config.read("config.ini")
+    user_list = requests.get(config.get("SLACKPARAMETER", "slack_user_list"))
 
-        for item in server._data['jobs']:
-            if item['name'] == jobname:
-                joburl=item['url']
-                break
-        if joburl == '':
-            responsetext="*"+jobname+" * No such job found on Jenkins Server"
+    for item in server._data['jobs']:
+        if item['name'] == jobname:
+            joburl=item['url']
+            break
+    if joburl == '':
+        responsetext="*"+jobname+" * No such job found on Jenkins Server"
+    else:
+        indexvalue = joburl.index('//', )
+        jenkins_json_url = joburl[:indexvalue + 2] + jenkins_username+':'+jenkins_token+'@' + joburl[indexvalue + 2:]+'/api/json'
+        paralist=requests.get(url=jenkins_json_url)
+        paralist=json.loads(paralist.text)['actions'][0]['parameterDefinitions']
+        if len(paralist) <= 5:
+            db = getdb_doclist()
+            entities = {}
+            for item in paralist:
+                if item['type']=='StringParameterDefinition':
+                    entities[item['name']]={'value':item['defaultParameterValue']['value'],'type':'text'}
+                elif item['type']=='ChoiceParameterDefinition':
+                    entities[item['name']] = {'value':','.join(item['choices']),'type': 'select','default': item['defaultParameterValue']['value']}
+                elif item['type']=='BooleanParameterDefinition':
+                    entities[item['name']] = {'value':'True,False','default': item['defaultParameterValue']['value'], 'type': 'select'}
+
+            db.jenkins_job.insert({"name": jobname, "jobname": jobname,"value":{'url':+user_list+'/build','intent':'Fire Build'},"entities": entities})
+            db.master.update_one({"master.key": "jenkins jobs: "},{"$set": {"master.value."+jobname: [jobname]}})
+            responsetext="Jenkins Job Registered Successfully"
         else:
-            indexvalue = joburl.index('//', )
-            jenkins_json_url = joburl[:indexvalue + 2] + jenkins_username+':'+jenkins_token+'@' + joburl[indexvalue + 2:]+'/api/json'
-            paralist=requests.get(url=jenkins_json_url)
-            paralist=json.loads(paralist.text)['actions'][0]['parameterDefinitions']
-            if len(paralist) <= 5:
-                db = getdb_doclist()
-                entities = {}
-                for item in paralist:
-                    if item['type']=='StringParameterDefinition':
-                        entities[item['name']]={'value':item['defaultParameterValue']['value'],'type':'text'}
-                    elif item['type']=='ChoiceParameterDefinition':
-                        entities[item['name']] = {'value':','.join(item['choices']),'type': 'select','default': item['defaultParameterValue']['value']}
-                    elif item['type']=='BooleanParameterDefinition':
-                        entities[item['name']] = {'value':'True,False','default': item['defaultParameterValue']['value'], 'type': 'select'}
+            responsetext="Job with less than or equal to 5 parameters are allowed"
+    if responsetext == '':
+        responsetext = "Something went wrong , please try after some time"
 
-                db.jenkins_job.insert({"name": jobname, "jobname": jobname,"value":{'url':+user_list+'/build','intent':'Fire Build'},"entities": entities})
-                db.master.update_one({"master.key": "jenkins jobs: "},{"$set": {"master.value."+jobname: [jobname]}})
-                responsetext="Jenkins Job Registered Successfully"
-            else:
-                responsetext="Job with less than or equal to 5 parameters are allowed"
-        if responsetext == '':
-            responsetext = "Something went wrong , please try after some time"
-
-        return responsetext
+    return responsetext
 
 def load_authentication():
     userslitst=getdb_doclist()

@@ -1,8 +1,6 @@
 from flask import Flask, make_response
-from  builtins import any
 from data_util import *
 from slackclient import SlackClient
-from flask import Markup
 
 app = Flask(__name__)
 
@@ -212,7 +210,6 @@ def message_actions():
             update_channel_msg(channelid, timestamp, attachments, textresponse)
 
         elif actions[0]["name"].lower() == "config":
-            global indexvalue
             jobdetails[user_id] = {}
             jobdetails[user_id]['ts'] = message_action['original_message']['ts']
             db = getdb_doclist().master
@@ -223,7 +220,7 @@ def message_actions():
             configparameters=[]
             for itemlist in paralist:
                 configparameters.append({'name': itemlist, 'type': 'text', 'label': itemlist})
-            open_dialog = slack_client.api_call(
+            slack_client.api_call(
                 "dialog.open",
                 trigger_id=message_action["trigger_id"],
                 dialog={
@@ -282,7 +279,7 @@ def message_actions():
                             dummy["options"]=optionslist
                         elementslist.append(dummy)
 
-                    open_dialog = slack_client.api_call(
+                    slack_client.api_call(
                         "dialog.open",
                         trigger_id=message_action["trigger_id"],
                         dialog={
